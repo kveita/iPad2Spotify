@@ -10,10 +10,15 @@ module.exports = function (req, res) {
     var cfg = lib.config(req);
     lib.spotifyToken(cfg, 'grant_type=client_credentials', function (tokenErr, tokenStatus, token) {
       if (tokenErr || tokenStatus !== 200 || !token.access_token) return lib.json(res, 502, { error: 'Spotify search unavailable.' });
-      var url = 'https://api.spotify.com/v1/search?q=' + encodeURIComponent(q) + '&type=playlist&market=NO&limit=10&offset=0';
-      console.log('Starting playlist search request: ' + url);
-      lib.request(url, { headers: { Authorization: 'Bearer ' + token.access_token } }, function (apiErr, status, data) {
-        console.log('Playlist search request completed with status: ' + status);
+      function search(limit, done) {
+        var url = 'https://api.spotify.com/v1/search?q=' + encodeURIComponent(q) + '&type=playlist&market=NO&limit=' + limit + '&offset=0';
+        console.log('Starting playlist search request: ' + url);
+        lib.request(url, { headers: { Authorization: 'Bearer ' + token.access_token }, timeout: 10000 }, function (apiErr, status, data) {
+          console.log('Playlist search request completed with status: ' + status);
+          done(apiErr, status, data);
+        });
+      }
+      function respond(apiErr, status, data) {
         if (apiErr) return lib.json(res, 502, { error: 'Spotify request failed.' });
         if (status !== 200) return lib.json(res, status, data || { error: 'Spotify request failed.' });
         var items = (data.playlists && data.playlists.items) || [];
@@ -21,6 +26,12 @@ module.exports = function (req, res) {
           return { id: playlist.id, name: playlist.name, image: playlist.images && playlist.images.length ? playlist.images[playlist.images.length - 1].url : '' };
         });
         lib.json(res, 200, { playlists: playlists });
+      }
+      search(10, function (apiErr, status, data) {
+        if (!apiErr && status === 200) return respond(null, status, data);
+        // Spotify can intermittently stall on a larger playlist result set for some queries.
+        // Retry once with the smaller result set before returning a controlled error.
+        search(3, respond);
       });
     });
   });

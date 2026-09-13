@@ -56,3 +56,23 @@ test('returns mapped playlist results using the same request path as artist sear
   assert.strictEqual(body.playlists[0].name, 'Nordic Hits');
   assert.strictEqual(body.playlists[0].image, 'small.jpg');
 });
+
+test('retries with a smaller limit when the first Spotify request fails', function () {
+  var urls = [];
+  var restore = stubLib({
+    kvGet: validSession, spotifyToken: validToken,
+    request: function (url, options, cb) {
+      urls.push(url);
+      if (urls.length === 1) return cb(new Error('upstream timeout'));
+      cb(null, 200, { playlists: { items: [{ id: 'pl-456', name: 'Autumn Affection', images: [] }] } });
+    }
+  });
+  var res = helpers.fakeRes();
+  searchPlaylist(helpers.fakeReq('GET', '/api/spotify/search-playlist?q=autumn%20affection', 'spotify_session=sid'), res);
+  restore();
+  assert.strictEqual(urls.length, 2);
+  assert.match(urls[0], /limit=10/);
+  assert.match(urls[1], /limit=3/);
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(helpers.resBody(res).playlists[0].id, 'pl-456');
+});
