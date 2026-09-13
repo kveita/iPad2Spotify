@@ -12,7 +12,6 @@ function stubLib(overrides) {
   return function restore() { Object.keys(originals).forEach(function (key) { lib[key] = originals[key]; }); };
 }
 
-function validSession(key, cb) { cb(null, { refresh_token: 'refresh-token' }); }
 function validToken(cfg, body, cb) { cb(null, 200, { access_token: 'access-token' }); }
 
 test('rejects non-GET requests with 405', function () {
@@ -21,29 +20,23 @@ test('rejects non-GET requests with 405', function () {
   assert.strictEqual(res.statusCode, 405);
 });
 
-test('requires a paired session cookie', function () {
-  var res = helpers.fakeRes();
-  searchPlaylist(helpers.fakeReq('GET', '/api/spotify/search-playlist?q=Lofoten'), res);
-  assert.strictEqual(res.statusCode, 401);
-});
-
 test('rejects an empty search query', function () {
   var res = helpers.fakeRes();
-  searchPlaylist(helpers.fakeReq('GET', '/api/spotify/search-playlist?q=', 'spotify_session=sid'), res);
+  searchPlaylist(helpers.fakeReq('GET', '/api/spotify/search-playlist?q='), res);
   assert.strictEqual(res.statusCode, 400);
 });
 
-test('returns mapped playlist results for a valid query', function () {
+test('returns mapped playlist results without a session lookup', function () {
   var calledUrl = null;
   var restore = stubLib({
-    kvGet: validSession, spotifyToken: validToken,
+    spotifyToken: validToken,
     request: function (url, options, cb) {
       calledUrl = url;
       cb(null, 200, { playlists: { items: [{ id: 'pl-123', name: 'Nordic Hits', images: [{ url: 'big.jpg' }, { url: 'small.jpg' }] }] } });
     }
   });
   var res = helpers.fakeRes();
-  searchPlaylist(helpers.fakeReq('GET', '/api/spotify/search-playlist?q=Nordic%20Hits', 'spotify_session=sid'), res);
+  searchPlaylist(helpers.fakeReq('GET', '/api/spotify/search-playlist?q=Nordic%20Hits'), res);
   restore();
   assert.match(calledUrl, /type=playlist/);
   assert.match(calledUrl, /q=Nordic%20Hits/);
