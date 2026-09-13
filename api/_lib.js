@@ -61,7 +61,7 @@ function request(url, options, callback) {
 }
 function spotifyToken(cfg, body, callback) {
   var encoded = Buffer.from(cfg.id + ':' + cfg.secret).toString('base64');
-  request('https://accounts.spotify.com/api/token', { method: 'POST', headers: { 'Authorization': 'Basic ' + encoded, 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body) }, body: body }, callback);
+  request('https://accounts.spotify.com/api/token', { method: 'POST', headers: { 'Authorization': 'Basic ' + encoded, 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body) }, body: body, timeout: 10000 }, callback);
 }
 function requestBuffer(url, options, callback) {
   var called = false;
