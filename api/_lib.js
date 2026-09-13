@@ -43,8 +43,10 @@ function origin(req) { return (process.env.APP_ORIGIN || ('https://' + req.heade
 function config(req) { return { id: process.env.SPOTIFY_CLIENT_ID, secret: process.env.SPOTIFY_CLIENT_SECRET, redirect: origin(req) + '/api/auth/callback' }; }
 function request(url, options, callback) {
   var called = false;
+  var timer;
   function done(err, status, data, text) {
     if (called) return; called = true;
+    if (timer) clearTimeout(timer);
     callback(err, status, data, text);
   }
   var https = require('https'), parsed = require('url').parse(url), req = https.request({ hostname: parsed.hostname, path: parsed.path, method: options.method || 'GET', headers: options.headers || {} }, function (res) {
@@ -55,7 +57,9 @@ function request(url, options, callback) {
     res.on('aborted', function () { done(new Error('Request aborted.')); });
   });
   req.on('error', function (err) { done(err); });
-  req.setTimeout(options.timeout || 120000, function () { req.destroy(new Error('Upstream request timed out.')); });
+  var timeout = options.timeout || 120000;
+  timer = setTimeout(function () { req.destroy(); done(new Error('Upstream request timed out.')); }, timeout);
+  req.setTimeout(timeout, function () { req.destroy(new Error('Upstream request timed out.')); });
   if (options.body) req.write(options.body);
   req.end();
 }
