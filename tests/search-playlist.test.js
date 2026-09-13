@@ -68,11 +68,14 @@ test('returns a controlled error when Spotify search fails', async function () {
   var calls = [];
   await withConfigAndFetch(fakeFetchSequence([
     { status: 200, body: { access_token: 'access-token' } },
+    { status: 503, body: { error: { status: 503, message: 'upstream unavailable' } } },
+    { status: 503, body: { error: { status: 503, message: 'upstream unavailable' } } },
     { status: 503, body: { error: { status: 503, message: 'upstream unavailable' } } }
   ], calls), async function () {
     var res = helpers.fakeRes();
     searchPlaylist(helpers.fakeReq('GET', '/api/spotify/search-playlist?q=autumn%20affection'), res);
     await settled();
-    assert.strictEqual(res.statusCode, 503);
+    assert.strictEqual(res.statusCode, 502);
+    assert.strictEqual(calls.length, 4);
   });
 });
