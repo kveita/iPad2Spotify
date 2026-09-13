@@ -6,7 +6,7 @@ module.exports = function (req, res) {
   // Check cache first (before session validation to save time)
   var cacheKey = 'search:playlist:' + encodeURIComponent(q);
   lib.kvGet(cacheKey, function (cacheErr, cached) {
-    if (!cacheErr && cached) return lib.json(res, 200, cached);
+    if (!cacheErr && cached && Array.isArray(cached.playlists)) return lib.json(res, 200, cached);
     // Only validate session if cache miss
     lib.rateLimit(req, 'search-playlist', 30, 60, function (limitErr, limited) {
       if (limitErr) return lib.json(res, 503, { error: 'Rate-limit storage is unavailable.' });
@@ -18,9 +18,12 @@ module.exports = function (req, res) {
         var cfg = lib.config(req);
         lib.spotifyToken(cfg, 'grant_type=client_credentials', function (tokenErr, tokenStatus, token) {
           if (tokenErr || tokenStatus !== 200 || !token.access_token) return lib.json(res, 502, { error: 'Spotify search unavailable.' });
-          var url = 'https://api.spotify.com/v1/search?q=' + encodeURIComponent(q) + '&type=playlist&market=NO&limit=10&offset=0';
+          // Playlist searches are materially slower than artist searches. Keep the
+          // response small and fail promptly rather than exhausting Vercel's
+          // function duration when Spotify is slow.
+          var url = 'https://api.spotify.com/v1/search?q=' + encodeURIComponent(q) + '&type=playlist&market=NO&limit=3&offset=0';
           console.log('Starting playlist search request: ' + url);
-          lib.request(url, { headers: { Authorization: 'Bearer ' + token.access_token } }, function (apiErr, status, data) {
+          lib.request(url, { headers: { Authorization: 'Bearer ' + token.access_token }, timeout: 15000 }, function (apiErr, status, data) {
             console.log('Playlist search request completed with status: ' + status);
             if (apiErr) return lib.json(res, 502, { error: 'Spotify request failed.' });
             if (status !== 200) return lib.json(res, status, data || { error: 'Spotify request failed.' });

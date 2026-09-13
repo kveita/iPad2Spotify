@@ -6,7 +6,7 @@ module.exports = function (req, res) {
   // Check cache first (before session validation to save time)
   var cacheKey = 'search:artist:' + encodeURIComponent(q);
   lib.kvGet(cacheKey, function (cacheErr, cached) {
-    if (!cacheErr && cached) return lib.json(res, 200, cached);
+    if (!cacheErr && cached && Array.isArray(cached.artists)) return lib.json(res, 200, cached);
     // Only validate session if cache miss
     lib.rateLimit(req, 'search-artist', 30, 60, function (limitErr, limited) {
       if (limitErr) return lib.json(res, 503, { error: 'Rate-limit storage is unavailable.' });
