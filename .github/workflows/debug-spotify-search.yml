@@ -79,7 +79,7 @@ jobs:
             }
             
             // Test search function
-            async function testSearch(type, query, limit = 5, market = 'NO') {
+            async function testSearch(token, type, query, limit = 5, market = 'NO') {
               console.log(\`\\nTesting \${type} search for \"\${query}\"...\`);
               console.log(\`URL will be: /v1/search?type=\${type}&limit=\${limit}&market=\${market}&q=\${encodeURIComponent(query)}\`);
               
@@ -129,10 +129,10 @@ jobs:
                 console.log('Token ready, starting search tests...');
                 
                 // Test artist search
-                const artistResult = await testSearch('artist', 'Billie Holiday');
+                const artistResult = await testSearch(token, 'artist', 'Billie Holiday');
                 
                 // Test playlist search
-                const playlistResult = await testSearch('playlist', 'Nordic Hits');
+                const playlistResult = await testSearch(token, 'playlist', 'Nordic Hits');
                 
                 console.log('\\n=== SUMMARY ===');
                 console.log('Artist search: ' + (artistResult.success ? 'SUCCESS' : 'FAILED') + ' in ' + artistResult.elapsed + 'ms');
