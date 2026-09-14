@@ -6,6 +6,27 @@
   function message(text){id('message').innerHTML=text}
 function request(method,url,body,done){if(url.charAt(0)==='/')url='https://'+location.host+url;var x=new XMLHttpRequest();var called=false;function finish(status,data){if(called)return;called=true;done(status,data)}x.open(method,url,true);if(body)x.setRequestHeader('Content-Type','application/json');x.timeout=120000;x.onreadystatechange=function(){if(x.readyState===4){var d={};try{d=JSON.parse(x.responseText||'{}')}catch(e){}if(x.status===0){setTimeout(function(){finish(0,d)},0)}else finish(x.status,d)}};x.ontimeout=function(){finish(0,{error:'Request timed out.'})};x.onerror=function(){finish(0,{error:'Could not reach the server.'})};x.send(body?JSON.stringify(body):null)}
   function showPlayer(){id('setup').className='card hidden';id('player').className='player';id('status').innerHTML='Connected';poll()}
+  // Winamp mode toggle
+  var webampInstance = null;
+  function initWebamp() {
+    if (webampInstance) return;
+    webampInstance = new Webamp({
+      initialTracks: []
+    });
+    webampInstance.renderWhenReady(document.body);
+    // Hide original player UI
+    document.getElementById('player').classList.add('hidden');
+  }
+  function toggleWinamp() {
+    if (webampInstance) {
+      webampInstance.destroy();
+      webampInstance = null;
+      document.getElementById('player').classList.remove('hidden');
+    } else {
+      initWebamp();
+    }
+  }
+  document.getElementById('winamp-toggle').addEventListener('click', toggleWinamp);
   function pair(){var code=id('pairing-code').value.replace(/[^a-z0-9]/ig,'').toUpperCase();if(!code){message('Enter the code shown in Safari after Spotify login.');return}message('Pairing this fullscreen app…');request('POST','/api/auth/pair',{code:code},function(status,data){if(status===200){message('');showPlayer()}else if(status===0)message('Could not reach the server. Check the connection and try again.');else message((data&&data.error)||('Pairing failed (status '+status+'). Try a new code.'))})}
   function login(){window.location.href='/api/auth/login'}
   function formatTime(ms){if(!ms||ms<0)ms=0;var totalSec=Math.floor(ms/1000),m=Math.floor(totalSec/60),s=totalSec%60;return m+':'+(s<10?'0':'')+s}
