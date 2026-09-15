@@ -211,7 +211,16 @@ The regular player also has a **Minimalist View** button. Minimalist View center
 
 The **Search Artist** button opens a search dialog. Enter an artist name and select **Search** to see matching Spotify artists, then select an artist to start playback of that artist's catalog (Spotify's equivalent of "artist radio") on the currently active device.
 
-The **Winamp Mode** button swaps the dashboard for a retro Winamp-style skin that resembles the classic Winamp 2 player (and the Winamp-inspired Spotiamp client). It runs entirely in the same ES5/XMLHttpRequest frontend — it is a CSS/JS skin of the existing dashboard, not the Webamp browser bundle — so it keeps working on the iPad 2 running Safari on iOS 9.3.6. The mode displays the current track in a scrolling marquee, a bouncing bar "oscilloscope" that animates while music is playing, elapsed and total track time, and a progress bar. Its previous, play/stop/pause, and next buttons drive Spotify via the same allowlisted command API as the regular player. Select **Exit Winamp** to return to the regular dashboard.
+The **Winamp Mode** button swaps the dashboard for a retro Winamp-style skin that resembles the classic Winamp 2 player (and the Winamp-inspired Spotiamp client). It runs entirely in the same ES5/XMLHttpRequest frontend — it is a CSS/JS skin of the existing dashboard, not the Webamp browser bundle — so it keeps working on the iPad 2 running Safari on iOS 9.3.6.
+
+The mode is made of four free-floating **modules** whose layout and look mirror Webamp's windows:
+
+- **Main window** — the player: current track in a scrolling marquee, album art, a bouncing-bar "oscilloscope" that animates while playing, elapsed/total time, a seekbar, and previous/play/stop/pause/next controls plus a volume bar. All playback buttons drive Spotify through the same allowlisted command API as the regular player.
+- **Playlist Editor** — Spotify queue/track list rendered as green-on-black rows (Webamp's playlist palette); the currently playing row is highlighted.
+- **Equalizer** — the 10 Winamp EQ bands (60Hz–16kHz) plus preamp as draggable vertical sliders with live dB readout, and **ON/AUTO** toggles. Equalizer bands are a visual control (a canvas fade), not actual audio DSP, since the iPad 2 exposes no Web Audio EQ.
+- **Milkdrop** — a canvas visualizer that draws reactive waveform bars while music plays. It is a CSS/canvas stand-in (a 2D oscilloscope gradient), because Milkdrop's real renderer needs WebGL/Butterchurn, which the iPad 2 GPU does not provide.
+
+Every module has a title bar with a **shade** (▬) and **close** (×) control, and every module can be **dragged** around the screen, with snap-to-grid so windows align against each other and the screen edges. Choose **Exit Winamp** to return to the regular dashboard.
 
 Playback controls generally require a Spotify Premium account and an active controllable Spotify device. The dashboard does not play audio itself.
 

@@ -21,24 +21,72 @@
       <div class="details"><p class="eyebrow">CURRENTLY PLAYING</p><h2 id="title">Nothing playing</h2><p id="artist">Start Spotify on another device</p><p id="album"></p><div class="controls"><button id="previous" class="round icon-prev" aria-label="Previous track"></button><button id="play" class="play icon-play" aria-label="Play"></button><button id="next" class="round icon-next" aria-label="Next track"></button></div><div class="timeline"><div class="timeline-track"><div id="timeline-fill" class="timeline-fill"></div></div><div class="timeline-time"><span id="time-elapsed">0:00</span><span id="time-duration">0:00</span></div></div><p id="player-message" class="message">Updates every 5 seconds</p><div class="actions"><button id="minimalist" class="secondary small-button">Minimalist View</button><button id="search-artist" class="secondary small-button">Search artist/playlist</button><button id="badge" class="secondary small-button">Create GitHub README Badge</button><button id="winamp-toggle" class="secondary small-button">Winamp Mode</button><button id="disconnect" class="link">Disconnect</button></div>
     </section>
     <section id="winamp-player" class="winamp hidden" aria-label="Winamp mode player">
-      <div class="winamp-window">
-        <div class="winamp-titlebar"><span class="winamp-title">iPad2Spotify Winamp</span><button id="winamp-exit" class="winamp-close" aria-label="Exit Winamp mode">×</button></div>
-        <div class="winamp-display">
-          <div class="winamp-marquee"><span id="winamp-track" class="winamp-track-text">Nothing playing</span></div>
-          <div class="winamp-time"><span id="winamp-elapsed">0:00</span><span id="winamp-duration">0:00</span></div>
-          <div class="winamp-osc" id="winamp-osc" aria-hidden="true"><span class="winamp-obar winamp-o1"></span><span class="winamp-obar winamp-o2"></span><span class="winamp-obar winamp-o3"></span><span class="winamp-obar winamp-o4"></span><span class="winamp-obar winamp-o5"></span><span class="winamp-obar winamp-o6"></span><span class="winamp-obar winamp-o7"></span><span class="winamp-obar winamp-o8"></span><span class="winamp-obar winamp-o9"></span><span class="winamp-obar winamp-o10"></span><span class="winamp-obar winamp-o11"></span><span class="winamp-obar winamp-o12"></span><span class="winamp-obar winamp-o13"></span><span class="winamp-obar winamp-o14"></span><span class="winamp-obar winamp-o15"></span><span class="winamp-obar winamp-o16"></span><span class="winamp-obar winamp-o17"></span><span class="winamp-obar winamp-o18"></span><span class="winamp-obar winamp-o19"></span><span class="winamp-obar winamp-o20"></span></div>
-          <div class="winamp-trackbar"><div id="winamp-fill" class="winamp-fill"></div></div>
+      <div id="winamp-mover" class="winamp-mover">
+        <!-- MAIN window: player -->
+        <div id="winamp-main" class="wmodule main" data-mod="main" style="left:0;top:0">
+          <div class="wtitle"><span class="wtitle-text">iPad2Spotify — Winamp</span><span class="wtitle-btns"><button class="wbtn-min" data-mod="main" aria-label="Shade">▬</button><button class="wbtn-close" data-mod="main" aria-label="Close window">×</button></span></div>
+          <div class="wcontents main-contents">
+            <div class="main-art"><img id="winamp-art" alt=""><div id="winamp-placeholder">♫</div></div>
+            <div class="main-body">
+              <div class="winamp-marquee"><span id="winamp-track" class="winamp-track-text">Nothing playing</span></div>
+              <div class="winamp-time"><span id="winamp-elapsed">0:00</span><span class="winamp-kbps">128 kbps</span><span id="winamp-duration">0:00</span></div>
+              <div class="winamp-osc" id="winamp-osc" aria-hidden="true"><span class="winamp-obar winamp-o1"></span><span class="winamp-obar winamp-o2"></span><span class="winamp-obar winamp-o3"></span><span class="winamp-obar winamp-o4"></span><span class="winamp-obar winamp-o5"></span><span class="winamp-obar winamp-o6"></span><span class="winamp-obar winamp-o7"></span><span class="winamp-obar winamp-o8"></span><span class="winamp-obar winamp-o9"></span><span class="winamp-obar winamp-o10"></span><span class="winamp-obar winamp-o11"></span><span class="winamp-obar winamp-o12"></span><span class="winamp-obar winamp-o13"></span><span class="winamp-obar winamp-o14"></span><span class="winamp-obar winamp-o15"></span><span class="winamp-obar winamp-o16"></span><span class="winamp-obar winamp-o17"></span><span class="winamp-obar winamp-o18"></span><span class="winamp-obar winamp-o19"></span><span class="winamp-obar winamp-o20"></span></div>
+              <div class="winamp-trackbar-seek"><div id="winamp-fill" class="winamp-fill"></div></div>
+              <div class="winamp-controls">
+                <button id="winamp-prev" class="winamp-btn winamp-prev" aria-label="Previous track">⏮</button>
+                <button id="winamp-play" class="winamp-btn winamp-play" aria-label="Play">▶</button>
+                <button id="winamp-stop" class="winamp-btn winamp-stop" aria-label="Stop">■</button>
+                <button id="winamp-pause" class="winamp-btn winamp-pause" aria-label="Pause">❚❚</button>
+                <button id="winamp-next" class="winamp-btn winamp-next" aria-label="Next track">⏭</button>
+                <div class="winamp-volume"><span class="winamp-vol-label">VOL</span><div id="winamp-vol" class="winamp-volbar"><div id="winamp-vol-fill" class="winamp-vol-fill"></div></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="winamp-status" id="winamp-message">Updates every 5 seconds</div>
         </div>
-        <div class="winamp-controls">
-          <button id="winamp-prev" class="winamp-btn winamp-prev" aria-label="Previous track">⏮</button>
-          <button id="winamp-play" class="winamp-btn winamp-play" aria-label="Play">▶</button>
-          <button id="winamp-stop" class="winamp-btn winamp-stop" aria-label="Stop">■</button>
-          <button id="winamp-pause" class="winamp-btn winamp-pause" aria-label="Pause">❚❚</button>
-          <button id="winamp-next" class="winamp-btn winamp-next" aria-label="Next track">⏭</button>
-          <div class="winamp-volume"><span class="winamp-vol-label">VOL</span><div id="winamp-vol" class="winamp-volbar"><div id="winamp-vol-fill" class="winamp-vol-fill"></div></div></div>
+        <!-- PLAYLIST window -->
+        <div id="winamp-playlist" class="wmodule playlist" data-mod="playlist" style="left:285px;top:0">
+          <div class="wtitle"><span class="wtitle-text">◓ Playlist Editor</span><span class="wtitle-btns"><button class="wbtn-min" data-mod="playlist" aria-label="Shade">▬</button><button class="wbtn-close" data-mod="playlist" aria-label="Close window">×</button></span></div>
+          <div class="wcontents playlist-contents">
+            <div class="playlist-tabs"><span class="ptab ptab-active">Playlist</span></div>
+            <div id="winamp-playlist-list" class="playlist-list">
+              <div class="playlist-row"><span class="pl-exit">×</span><span class="pl-num">Spotify Queue</span></div>
+              <div class="playlist-row"><span class="pl-exit">×</span><span class="pl-num">(playing from Spotify on another device)</span></div>
+            </div>
+            <div class="playlist-footer"><button id="winamp-pl-clear" class="pl-btn">CLR</button><button id="winamp-pl-add" class="pl-btn">ADD</button><button id="winamp-pl-selall" class="pl-btn">SEL</button><button id="winamp-pl-back" class="pl-btn">◀◀</button><button id="winamp-pl-play" class="pl-btn">▶</button><button id="winamp-pl-fwd" class="pl-btn">▶▶</button><button id="winamp-pl-stop" class="pl-btn">■</button></div>
+          </div>
         </div>
-        <div class="winamp-status" id="winamp-message">Updates every 5 seconds</div>
+        <!-- EQUALIZER window -->
+        <div id="winamp-eq" class="wmodule eq" data-mod="eq" style="left:0;top:126px">
+          <div class="wtitle"><span class="wtitle-text">◨ Equalizer</span><span class="wtitle-btns"><button class="wbtn-min" data-mod="eq" aria-label="Shade">▬</button><button class="wbtn-close" data-mod="eq" aria-label="Close window">×</button></span></div>
+          <div class="wcontents eq-contents">
+            <div class="eq-presets"><button id="eq-preset" class="eq-preset-btn">→PRESETS</button></div>
+            <div class="eq-bands" id="eq-bands">
+              <div class="eq-band"><span class="eq-val">0</span><input type="range" min="0" max="100" value="50" class="eq-slider eq-slider-v" data-band="preamp" aria-label="Preamp"><span class="eq-label">PRE</span></div>
+              <div class="eq-band"><span class="eq-val">0</span><input type="range" min="0" max="100" value="50" class="eq-slider eq-slider-v" data-band="60" aria-label="60Hz"><span class="eq-label">60</span></div>
+              <div class="eq-band"><span class="eq-val">0</span><input type="range" min="0" max="100" value="50" class="eq-slider eq-slider-v" data-band="170" aria-label="170Hz"><span class="eq-label">170</span></div>
+              <div class="eq-band"><span class="eq-val">0</span><input type="range" min="0" max="100" value="50" class="eq-slider eq-slider-v" data-band="310" aria-label="310Hz"><span class="eq-label">310</span></div>
+              <div class="eq-band"><span class="eq-val">0</span><input type="range" min="0" max="100" value="50" class="eq-slider eq-slider-v" data-band="600" aria-label="600Hz"><span class="eq-label">600</span></div>
+              <div class="eq-band"><span class="eq-val">0</span><input type="range" min="0" max="100" value="50" class="eq-slider eq-slider-v" data-band="1000" aria-label="1kHz"><span class="eq-label">1K</span></div>
+              <div class="eq-band"><span class="eq-val">0</span><input type="range" min="0" max="100" value="50" class="eq-slider eq-slider-v" data-band="3000" aria-label="3kHz"><span class="eq-label">3K</span></div>
+              <div class="eq-band"><span class="eq-val">0</span><input type="range" min="0" max="100" value="50" class="eq-slider eq-slider-v" data-band="6000" aria-label="6kHz"><span class="eq-label">6K</span></div>
+              <div class="eq-band"><span class="eq-val">0</span><input type="range" min="0" max="100" value="50" class="eq-slider eq-slider-v" data-band="12000" aria-label="12kHz"><span class="eq-label">12K</span></div>
+              <div class="eq-band"><span class="eq-val">0</span><input type="range" min="0" max="100" value="50" class="eq-slider eq-slider-v" data-band="14000" aria-label="14kHz"><span class="eq-label">14K</span></div>
+              <div class="eq-band"><span class="eq-val">0</span><input type="range" min="0" max="100" value="50" class="eq-slider eq-slider-v" data-band="16000" aria-label="16kHz"><span class="eq-label">16K</span></div>
+            </div>
+            <div class="eq-controls"><span class="eq-onoff"><button id="eq-on" class="eq-toggle eq-toggle-active">ON</button><button id="eq-auto" class="eq-toggle">AUTO</button></span></div>
+          </div>
+        </div>
+        <!-- MILKDROP window -->
+        <div id="winamp-milkdrop" class="wmodule milkdrop" data-mod="milkdrop" style="left:285px;top:126px">
+          <div class="wtitle"><span class="wtitle-text">◐ Milkdrop</span><span class="wtitle-btns"><button class="wbtn-min" data-mod="milkdrop" aria-label="Shade">▬</button><button class="wbtn-close" data-mod="milkdrop" aria-label="Close window">×</button></span></div>
+          <div class="wcontents milkdrop-contents">
+            <canvas id="milkdrop-canvas" class="milkdrop-canvas" width="275" height="116"></canvas>
+            <div id="milkdrop-message" class="milkdrop-message">No WebGL on iPad 2 — CSS visualizer</div>
+          </div>
+        </div>
       </div>
+      <button id="winamp-exit" class="winamp-exit-btn" aria-label="Exit Winamp mode">Exit Winamp Mode</button>
     </section>
     <div id="artist-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="artist-question"><div class="modal-box artist-box"><p id="artist-question">Search artist/playlist</p><button id="search-tab-artist" class="search-tab search-tab-active" type="button">Artist</button><button id="search-tab-playlist" class="search-tab" type="button">Playlist</button><label for="artist-query" id="artist-query-label">Artist name</label><input id="artist-query" type="text" autocorrect="off" spellcheck="false" placeholder="Enter artist name"><label for="playlist-query" id="playlist-query-label" class="hidden">Playlist name</label><input id="playlist-query" type="text" autocorrect="off" spellcheck="false" placeholder="Enter playlist name" class="hidden"><button id="artist-search-go" class="primary">Search</button><div id="artist-results" class="artist-results"></div><p id="artist-message" class="message"></p><button id="artist-cancel" class="secondary">Cancel</button></div></div>
     <div id="exit-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="exit-question"><div class="modal-box"><p id="exit-question">Exit minimalist view?</p><button id="exit-yes" class="primary">yes</button><button id="exit-no" class="secondary">no</button></div></div>

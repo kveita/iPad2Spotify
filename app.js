@@ -33,15 +33,162 @@ function request(method,url,body,done){if(url.charAt(0)==='/')url='https://'+loc
   id('winamp-stop').addEventListener('click', function () { winampCommand('pause'); });
   id('winamp-play').addEventListener('click', function () { winampCommand(current && current.is_playing ? 'pause' : 'play'); });
   id('winamp-pause').addEventListener('click', function () { winampCommand('pause'); });
+  // ---- Movable Webamp-style module windows (main/playlist/equalizer/milkdrop) ----
+  var SNAP = 15;
+  var WIN = { main: 275, playlist: 275, eq: 275, milkdrop: 275 };
+  var moduleEls = {};
+  ['main','playlist','eq','milkdrop'].forEach(function (k) { moduleEls[k] = id('winamp-' + k); });
+  var windowBounds = {};
+  function mwh() { try { return window.innerHeight || document.documentElement.clientHeight || 768; } catch (e) { return 768; } }
+  function mww() { try { return window.innerWidth || document.documentElement.clientWidth || 1024; } catch (e) { return 1024; } }
+  function clampWin(k, x, y) {
+    var w = WIN[k], h = mwh();
+    if (x < -w + 40) x = -w + 40;
+    if (x > mww() - 40) x = mww() - 40;
+    if (y < 0) y = 0;
+    if (y > h - 30) y = h - 30;
+    return { x: x, y: y };
+  }
+  function placeWin(k, x, y) {
+    var el = moduleEls[k]; if (!el) return;
+    var c = clampWin(k, x, y);
+    el.style.left = c.x + 'px'; el.style.top = c.y + 'px';
+    windowBounds[k] = { x: c.x, y: c.y, w: WIN[k] };
+  }
+  function initWinLayout() {
+    placeWin('main', 20, 40);
+    placeWin('playlist', 20 + WIN.main + SNAP, 40);
+    placeWin('eq', 20, 40 + 126 + SNAP);
+    placeWin('milkdrop', 20 + WIN.main + SNAP, 40 + 126 + SNAP);
+  }
+  function snapWin(k) {
+    // Snap each other module to this one if within SNAP distance on an edge
+    var b = windowBounds[k]; if (!b) return;
+    ['main','playlist','eq','milkdrop'].forEach(function (o) {
+      if (o === k || !windowBounds[o]) return;
+      var ob = windowBounds[o];
+      var nx, ny;
+      if (Math.abs(ob.y - (b.y + 116)) < SNAP && Math.abs(ob.x - b.x) < SNAP) ny = b.y + 116;
+      if (Math.abs((ob.y + 116) - b.y) < SNAP && Math.abs(ob.x - b.x) < SNAP) ny = b.y - 116;
+      if (Math.abs(ob.x - (b.x + WIN.main)) < SNAP && Math.abs(ob.y - b.y) < SNAP) nx = b.x + WIN.main;
+      if (Math.abs((ob.x + WIN.main) - b.x) < SNAP && Math.abs(ob.y - b.y) < SNAP) nx = b.x - WIN.main;
+      if (nx !== undefined || ny !== undefined) {
+        placeWin(o, nx !== undefined ? nx : ob.x, ny !== undefined ? ny : ob.y);
+      }
+    });
+  }
+  var drag = null;
+  function onDragStart(k, ev) {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    var el = moduleEls[k];
+    var x = el.offsetLeft, y = el.offsetTop;
+    var startX = (ev && (ev.touches ? ev.touches[0].clientX : ev.clientX)) || 0;
+    var startY = (ev && (ev.touches ? ev.touches[0].clientY : ev.clientY)) || 0;
+    drag = { k: k, startMouseX: startX, startMouseY: startY, startX: x, startY: y };
+    if (moduleEls[k]) moduleEls[k].style.zIndex = 100;
+  }
+  function onDragMove(ev) {
+    if (!drag) return;
+    var cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+    var cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+    var nx = drag.startX + (cx - drag.startMouseX);
+    var ny = drag.startY + (cy - drag.startMouseY);
+    placeWin(drag.k, nx, ny);
+  }
+  function onDragEnd() {
+    if (drag) { snapWin(drag.k); drag = null; }
+  }
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup', onDragEnd);
+  document.addEventListener('touchmove', onDragMove);
+  document.addEventListener('touchend', onDragEnd);
+  ['main','playlist','eq','milkdrop'].forEach(function (k) {
+    var title = moduleEls[k].querySelector('.wtitle');
+    if (title) {
+      title.addEventListener('mousedown', function (e) { if (e.target.className.indexOf && String(e.target.className).indexOf('wbtn') === -1) onDragStart(k, e); });
+      title.addEventListener('touchstart', function (e) { if (e.target.className.indexOf && String(e.target.className).indexOf('wbtn') === -1) onDragStart(k, e); });
+    }
+  });
+  function toggleModule(k) {
+    var el = moduleEls[k]; if (!el) return;
+    var hidden = el.className.indexOf('hidden') !== -1;
+    if (hidden) el.className = el.className.replace(' hidden', '');
+    else el.className += ' hidden';
+  }
+  function shadeModule(k) {
+    var el = moduleEls[k]; if (!el) return;
+    var shades = el.className.indexOf('shaded') !== -1;
+    if (shades) el.className = el.className.replace(' shaded', '');
+    else el.className += ' shaded';
+  }
+  // wire close/min buttons on each title bar
+  document.querySelectorAll('.wbtn-close').forEach(function (b) { b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); toggleModule(b.getAttribute('data-mod')); }); });
+  document.querySelectorAll('.wbtn-min').forEach(function (b) { b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); shadeModule(b.getAttribute('data-mod')); }); });
+  // Equalizer sliders: live feedback
+  document.querySelectorAll('.eq-slider-v').forEach(function (s) {
+    function updateVal() {
+      var v = parseInt(s.value, 10);
+      var band = s.getAttribute('data-band');
+      var valEl = s.parentNode.querySelector('.eq-val');
+      if (valEl) valEl.innerHTML = (band === 'preamp') ? (v - 50) : (v - 50);
+    }
+    s.addEventListener('input', updateVal);
+    s.addEventListener('change', updateVal);
+    updateVal();
+  });
+  // EQ ON / AUTO toggles
+  var eqOn = true, eqAuto = false;
+  function refreshEqToggles() {
+    id('eq-on').className = 'eq-toggle' + (eqOn ? ' eq-toggle-active' : '');
+    id('eq-auto').className = 'eq-toggle' + (eqAuto ? ' eq-toggle-active' : '');
+  }
+  id('eq-on').addEventListener('click', function () { eqOn = !eqOn; if (!eqOn) eqAuto = false; refreshEqToggles(); });
+  id('eq-auto').addEventListener('click', function () { eqAuto = !eqAuto; if (eqAuto) eqOn = true; refreshEqToggles(); });
+  // Milkdrop CSS visualizer (no WebGL on iPad 2)
+  var milkCtx = null, milkAnim = null, milkPhase = 0;
+  function initMilkdrop() {
+    var c = id('milkdrop-canvas');
+    if (!c || !c.getContext) return;
+    try { milkCtx = c.getContext('2d'); } catch (e) { milkCtx = null; }
+  }
+  function milkdropFrame() {
+    milkPhase += 0.06;
+    if (milkCtx && milkCtx.canvas) {
+      var W = milkCtx.canvas.width, H = milkCtx.canvas.height;
+      var g = milkCtx;
+      if (isPlayingState) {
+        for (var i = 0; i < 40; i++) {
+          var y = H/2 + Math.sin(milkPhase + i * 0.35) * (H/3) + Math.sin(milkPhase*1.7 + i*0.12) * (H/5);
+          var h = Math.max(4, (H - y) * 0.8);
+          g.fillStyle = 'rgb(' + Math.floor(120 + 120*Math.sin(milkPhase+i)) + ',' + Math.floor(80+120*Math.sin(milkPhase*1.3+i*2)) + ',40)';
+          g.fillRect((i/40)*W, y, W/40, h);
+        }
+      } else {
+        g.fillStyle = '#000';
+        g.fillRect(0, 0, W, H);
+      }
+    }
+    if (isPlayingState) setTimeout(milkdropFrame, 50);
+    else milkAnim = null;
+  }
+  function startMilkdrop() {
+    if (!milkAnim && isPlayingState) {
+      initMilkdrop();
+      milkAnim = setTimeout(milkdropFrame, 50);
+    }
+  }
+  function stopMilkdrop() { if (milkAnim) { clearTimeout(milkAnim); milkAnim = null; } }
+  initWinLayout();
   function pair(){var code=id('pairing-code').value.replace(/[^a-z0-9]/ig,'').toUpperCase();if(!code){message('Enter the code shown in Safari after Spotify login.');return}message('Pairing this fullscreen app…');request('POST','/api/auth/pair',{code:code},function(status,data){if(status===200){message('');showPlayer()}else if(status===0)message('Could not reach the server. Check the connection and try again.');else message((data&&data.error)||('Pairing failed (status '+status+'). Try a new code.'))})}
   function login(){window.location.href='/api/auth/login'}
   function formatTime(ms){if(!ms||ms<0)ms=0;var totalSec=Math.floor(ms/1000),m=Math.floor(totalSec/60),s=totalSec%60;return m+':'+(s<10?'0':'')+s}
   function schedulePoll(delay){if(timer)clearTimeout(timer);timer=setTimeout(poll,delay)}
   function pollDelay(data){var item=data&&data.item;if(!item)return 30000;if(!data.is_playing)return 30000;var duration=item.duration_ms||0,progress=data.progress_ms||0,remaining=duration-progress;if(remaining>0&&remaining<=20000)return Math.max(3000,Math.min(10000,remaining-2000));return 15000}
   function updateTimeline(){if(!current||!current.item){id('timeline-fill').style.width='0%';id('time-elapsed').innerHTML='0:00';id('time-duration').innerHTML='0:00';id('winamp-fill').style.width='0%';id('winamp-elapsed').innerHTML='0:00';id('winamp-duration').innerHTML='0:00';return}var duration=current.item.duration_ms||0,elapsed=current.progress_ms||0;if(current.is_playing)elapsed+=Date.now()-current.fetched_at;if(elapsed>duration)elapsed=duration;var pct=duration?Math.min(100,elapsed/duration*100):0;id('timeline-fill').style.width=pct+'%';id('time-elapsed').innerHTML=formatTime(elapsed);id('time-duration').innerHTML=formatTime(duration);id('winamp-fill').style.width=pct+'%';id('winamp-elapsed').innerHTML=formatTime(elapsed);id('winamp-duration').innerHTML=formatTime(duration)}
-  function setPlaying(isPlaying){isPlayingState=!!isPlaying;id('play').className=isPlaying?'play icon-play is-playing':'play icon-play';refreshBodyClass()}
-  function setWinampTrack(text){var el=id('winamp-track');if(el)el.innerHTML=text||'Nothing playing'}
-  function render(data){var item=data&&data.item;if(!item){id('title').innerHTML='Nothing playing';id('artist').innerHTML='Start Spotify on another device';id('album').innerHTML='';id('minimalist-artist').innerHTML='';id('minimalist-title').innerHTML='Nothing playing';id('art').style.display='none';id('placeholder').className='';setPlaying(false);setWinampTrack('');current=null;updateTimeline();return}current=data;current.fetched_at=Date.now();var artist=item.artists.map(function(a){return a.name}).join(', ');id('title').innerHTML=item.name;id('artist').innerHTML=artist;id('album').innerHTML=item.album.name;id('minimalist-artist').innerHTML=artist;id('minimalist-title').innerHTML=item.name;setPlaying(!!data.is_playing);setWinampTrack(escapeHtml(artist)+' — '+escapeHtml(item.name));if(item.album.images&&item.album.images.length){id('art').src=item.album.images[0].url;id('art').style.display='block';id('placeholder').className='hidden'}updateTimeline()}
+  function setPlaying(isPlaying){isPlayingState=!!isPlaying;id('play').className=isPlaying?'play icon-play is-playing':'play icon-play';refreshBodyClass();if(isPlaying)startMilkdrop();else stopMilkdrop()}
+  function setWinampTrack(text,artUrl){var el=id('winamp-track');if(el)el.innerHTML=text||'Nothing playing';var art=id('winamp-art');var ph=id('winamp-placeholder');if(art&&ph){var shown=artUrl&&artUrl.charAt?artUrl:'';if(shown){art.src=shown;art.style.display='block';ph.style.display='none'}else{art.style.display='none';ph.style.display='block'}}}
+  function updateWinampPlaylist(name,artist,isPlaying){var list=id('winamp-playlist-list');if(!list)return;var rows=list.getElementsByClassName('playlist-row');for(var i=0;i<rows.length;i++){rows[i].className='playlist-row';}var row=document.createElement('div');row.className='playlist-row'+(isPlaying?' current-row':'');var ex=document.createElement('span');ex.className='pl-exit';ex.innerHTML='×';var num=document.createElement('span');num.className='pl-num';num.innerHTML=name||'Nothing playing';row.appendChild(ex);row.appendChild(num);var first=list.firstChild;if(first)list.insertBefore(row,first);else list.appendChild(row)}
+  function render(data){var item=data&&data.item;if(!item){id('title').innerHTML='Nothing playing';id('artist').innerHTML='Start Spotify on another device';id('album').innerHTML='';id('minimalist-artist').innerHTML='';id('minimalist-title').innerHTML='Nothing playing';id('art').style.display='none';id('placeholder').className='';setPlaying(false);setWinampTrack('');current=null;updateTimeline();return}current=data;current.fetched_at=Date.now();var artist=item.artists.map(function(a){return a.name}).join(', ');var artUrl=(item.album&&item.album.images&&item.album.images.length)?item.album.images[0].url:'';id('title').innerHTML=item.name;id('artist').innerHTML=artist;id('album').innerHTML=item.album.name;id('minimalist-artist').innerHTML=artist;id('minimalist-title').innerHTML=item.name;setPlaying(!!data.is_playing);setWinampTrack(escapeHtml(artist)+' — '+escapeHtml(item.name),artUrl);updateWinampPlaylist(escapeHtml(item.name),escapeHtml(artist),data.is_playing);if(artUrl){id('art').src=artUrl;id('art').style.display='block';id('placeholder').className='hidden'}updateTimeline()}
   function poll(){request('GET','/api/spotify/currently-playing',null,function(status,data){if(status===200){render(data);id('winamp-message').innerHTML='Playing';schedulePoll(pollDelay(data))}else if(status===401){id('status').innerHTML='Not connected';id('player-message').innerHTML=data.error||'Pair again.';id('winamp-message').innerHTML=data.error||'Pair again.';schedulePoll(30000)}else{id('player-message').innerHTML='Waiting for Spotify…';id('winamp-message').innerHTML='Waiting for Spotify…';schedulePoll(30000)}})}
   function command(action){request('POST','/api/spotify/command',{action:action},function(status,data){if(status!==200){var m=data.error||'Command failed';id('player-message').innerHTML=m;id('winamp-message').innerHTML=m}else{id('winamp-message').innerHTML='Command sent'}schedulePoll(750)})}
   setInterval(updateTimeline,1000);

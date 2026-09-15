@@ -14,33 +14,53 @@ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const js = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
 
 class El {
-  constructor(id) { this._id = id; this.innerHTML = ''; this.className = ''; this.style = {}; this.handlers = {}; }
+  constructor(id) { this._id = id; this.innerHTML = ''; this.className = ''; this.style = {}; this.handlers = {}; this._children = []; }
   addEventListener(ev, fn) { this.handlers[ev] = fn; }
   set className(v) { this._className = v; } get className() { return this._className || ''; }
   set src(v) { this._src = v; } get src() { return this._src; }
   get value() { return this._value || ''; } set value(v) { this._value = v; }
   set onclick(fn) { this.handlers['click'] = fn; }
+  appendChild(child) { this._children.push(child); return child; }
+  insertBefore(child, ref) { this._children.push(child); return child; }
+  getElementsByClassName(cls) { return this._children.filter((c) => c && String(c.className||'').indexOf(cls) !== -1); }
+  querySelector(sel) {
+    if (sel && sel[0] === '.') return this._children.find((c) => c && String(c.className||'').split(/\s+/).indexOf(sel.slice(1)) !== -1) || null;
+    return this._children.find((c) => c && c._id && sel === '#'+c._id) || null;
+  }
+  querySelectorAll() { return []; }
+  get firstChild() { return this._children.length ? this._children[0] : null; }
+  getAttribute(a) { return this._attrs ? this._attrs[a] : null; }
   focus() {}
 }
 
 function buildDom() {
   const els = {};
   const idTags = [...html.matchAll(/<[^>]*\bid="([^"]+)"[^>]*>/g)];
+  const listeners = {};
   for (const m of idTags) {
     const el = new El(m[1]);
     const clsMatch = m[0].match(/class="([^"]*)"/);
     if (clsMatch) el._className = clsMatch[1];
+    el.offsetLeft = 0; el.offsetTop = 0;
+    el.style = el.style || {};
+    el.getContext = () => null;
+    el.value = 50;
+    // For module windows, synthesize a .wtitle child so the drag listener wires.
+    if (/^winamp-(main|playlist|eq|milkdrop)$/.test(m[1])) {
+      const title = new El(m[1] + '-title');
+      title.className = 'wtitle';
+      el.appendChild(title);
+    }
+    const seedMap = { 'winamp-toggle': 'Winamp Mode', 'winamp-track': 'Nothing playing', 'winamp-elapsed': '0:00', 'winamp-duration': '0:00' };
+    if (seedMap[m[1]]) el.innerHTML = seedMap[m[1]];
     els[m[1]] = el;
   }
-  // Seed initial innerHTML for elements whose plain text ends up asserted.
-  const seed = {
-    'winamp-toggle': 'Winamp Mode',
-    'winamp-track': 'Nothing playing',
-    'winamp-elapsed': '0:00',
-    'winamp-duration': '0:00',
-    'winamp-message': 'Updates every 5 seconds'
+  // Wire the drag listeners and title query for each module window
+  const qsa = (sel) => {
+    if (sel === '.wbtn-close' || sel === '.wbtn-min') return [];
+    if (sel === '.eq-slider-v') return [];
+    return [];
   };
-  for (const k in seed) if (els[k]) els[k].innerHTML = seed[k];
   const document = {
     getElementById: (id) => {
       if (!els[id]) throw new Error('Missing element: ' + id);
@@ -48,12 +68,19 @@ function buildDom() {
     },
     body: new El('body'),
     getElementsByTagName: () => [],
+    getElementsByClassName: (c) => Object.values(els).filter((el) => String(el.className||'').indexOf(c) !== -1),
+    createElement: () => new El('dyn'),
+    querySelectorAll: qsa,
+    querySelector: () => null,
+    addEventListener: (ev, fn) => { listeners[ev] = fn; },
+    documentElement: { clientHeight: 768, clientWidth: 1024 },
   };
-  return { document, els };
+  // Give each module element a .querySelector('.wtitle') returning a fake title
+  return { document, els, listeners };
 }
 
 function loadApp() {
-  const { document, els } = buildDom();
+  const { document, els, listeners } = buildDom();
   const script = js.replace(
     /request\('GET','\/api\/spotify\/currently-playing',null,function\(status\)\{if\(status===200\)showPlayer\(\)\}\);/,
     '' // strip the startup poll
@@ -65,7 +92,7 @@ function loadApp() {
   fn(document, {location: {host:'x',href:''}}, {host:'x', href:''}, class {
     open(){} setRequestHeader(){} send(){} set timeout(v){} get timeout(){return 120000}
   }, function(){}, function(){}, function(){});
-  return { document, els };
+  return { document, els, listeners };
 }
 
 test('app.js loads without throwing (all referenced ids exist)', () => {
@@ -146,6 +173,33 @@ test('render() populates winamp track, time and progress', () => {
   assert.match(els['winamp-elapsed'].innerHTML, /^0:50$/, 'elapsed shows 0:50');
   assert.match(els['winamp-duration'].innerHTML, /^3:20$/, 'duration shows 3:20');
   assert.strictEqual(els['winamp-fill'].style.width, '25%', 'progress bar at 25%');
+});
+
+test('Winamp modules are draggable and positioned correctly', () => {
+  const { document, els, listeners } = loadApp();
+  // Verify initial layout
+  assert.strictEqual(els['winamp-main'].style.left, '20px', 'main left');
+  assert.strictEqual(els['winamp-main'].style.top, '40px', 'main top');
+  assert.strictEqual(els['winamp-playlist'].style.left, '310px', 'playlist left');
+  assert.strictEqual(els['winamp-playlist'].style.top, '40px', 'playlist top');
+  assert.strictEqual(els['winamp-eq'].style.left, '20px', 'eq left');
+  assert.strictEqual(els['winamp-eq'].style.top, '181px', 'eq top');
+  assert.strictEqual(els['winamp-milkdrop'].style.left, '310px', 'milkdrop left');
+  assert.strictEqual(els['winamp-milkdrop'].style.top, '181px', 'milkdrop top');
+  // Simulate drag
+  const main = els['winamp-main'];
+  main.offsetLeft = 20; main.offsetTop = 40;
+  const title = main.querySelector('.wtitle');
+  assert.ok(title && title.handlers['mousedown'], 'main window has a mousedown drag handler on title');
+  const dragStart = { preventDefault: () => {}, stopPropagation: () => {}, touches: [{ clientX: 20, clientY: 40 }], target: title };
+  const dragMove = { touches: [{ clientX: 100, clientY: 100 }] };
+  // Call the drag handlers
+  title.handlers['mousedown'](dragStart);
+  listeners['mousemove'](dragMove);
+  listeners['mouseup']();
+  // Verify new position
+  assert.strictEqual(main.style.left, '100px', 'main moved left');
+  assert.strictEqual(main.style.top, '100px', 'main moved top');
 });
 
 test('Winamp exit restores the regular player', () => {
