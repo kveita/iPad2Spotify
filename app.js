@@ -146,38 +146,72 @@ function request(method,url,body,done){if(url.charAt(0)==='/')url='https://'+loc
   id('eq-auto').addEventListener('click', function () { eqAuto = !eqAuto; if (eqAuto) eqOn = true; refreshEqToggles(); });
   // Milkdrop CSS visualizer (no WebGL on iPad 2)
   var milkCtx = null, milkAnim = null, milkPhase = 0;
-  function initMilkdrop() {
-    var c = id('milkdrop-canvas');
-    if (!c || !c.getContext) return;
-    try { milkCtx = c.getContext('2d'); } catch (e) { milkCtx = null; }
+  
+function initButterchurn() {
+  const container = document.getElementById('winamp-milkdrop').querySelector('div');
+  const canvas = document.getElementById('milkdrop-canvas');
+
+  // Set canvas size to match container
+  const resizeCanvas = () => {
+    const rect = container.getBoundingClientRect();
+    canvas.width = Math.max(1, rect.width);
+    canvas.height = Math.max(1, rect.height);
+  };
+
+  // Initial resize
+  resizeCanvas();
+
+  // Create audio context and analyser
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const analyser = audioContext.createAnalyser();
+  analyser.fftSize = 2048;
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+
+  // Create a silent source
+  const source = audioContext.createOscillator();
+  source.connect(analyser);
+  source.start();
+
+  // Create butterchurn instance
+  butterchurnVisualizer = new butterchurn.default({
+    canvas: canvas,
+    audioContext: audioContext,
+    analyser: analyser,
+  });
+
+  // Start rendering
+  function render() {
+    analyser.getByteFrequencyData(dataArray);
+    butterchurnVisualizer.draw(dataArray);
+    animationFrameId = requestAnimationFrame(render);
   }
-  function milkdropFrame() {
-    milkPhase += 0.06;
-    if (milkCtx && milkCtx.canvas) {
-      var W = milkCtx.canvas.width, H = milkCtx.canvas.height;
-      var g = milkCtx;
-      if (isPlayingState) {
-        for (var i = 0; i < 40; i++) {
-          var y = H/2 + Math.sin(milkPhase + i * 0.35) * (H/3) + Math.sin(milkPhase*1.7 + i*0.12) * (H/5);
-          var h = Math.max(4, (H - y) * 0.8);
-          g.fillStyle = 'rgb(' + Math.floor(120 + 120*Math.sin(milkPhase+i)) + ',' + Math.floor(80+120*Math.sin(milkPhase*1.3+i*2)) + ',40)';
-          g.fillRect((i/40)*W, y, W/40, h);
-        }
-      } else {
-        g.fillStyle = '#000';
-        g.fillRect(0, 0, W, H);
-      }
-    }
-    if (isPlayingState) setTimeout(milkdropFrame, 50);
-    else milkAnim = null;
+
+  // Start the render loop
+  animationFrameId = requestAnimationFrame(render);
+
+  // Handle window resize
+  window.addEventListener('resize', resizeCanvas);
+}
+
+function startButterchurn() {
+  if (!butterchurnVisualizer) {
+    initButterchurn();
   }
-  function startMilkdrop() {
-    if (!milkAnim && isPlayingState) {
-      initMilkdrop();
-      milkAnim = setTimeout(milkdropFrame, 50);
-    }
+}
+
+function stopButterchurn() {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
   }
-  function stopMilkdrop() { if (milkAnim) { clearTimeout(milkAnim); milkAnim = null; } }
+}
+
+// Replace the old Milkdrop functions with the new ones
+// We'll also need to update the setPlaying function to use startButterchurn/stopButterchurn
+// But we'll do that separately by replacing the calls in setPlaying.
+
+ }
   initWinLayout();
   function pair(){var code=id('pairing-code').value.replace(/[^a-z0-9]/ig,'').toUpperCase();if(!code){message('Enter the code shown in Safari after Spotify login.');return}message('Pairing this fullscreen app…');request('POST','/api/auth/pair',{code:code},function(status,data){if(status===200){message('');showPlayer()}else if(status===0)message('Could not reach the server. Check the connection and try again.');else message((data&&data.error)||('Pairing failed (status '+status+'). Try a new code.'))})}
   function login(){window.location.href='/api/auth/login'}
@@ -185,7 +219,7 @@ function request(method,url,body,done){if(url.charAt(0)==='/')url='https://'+loc
   function schedulePoll(delay){if(timer)clearTimeout(timer);timer=setTimeout(poll,delay)}
   function pollDelay(data){var item=data&&data.item;if(!item)return 30000;if(!data.is_playing)return 30000;var duration=item.duration_ms||0,progress=data.progress_ms||0,remaining=duration-progress;if(remaining>0&&remaining<=20000)return Math.max(3000,Math.min(10000,remaining-2000));return 15000}
   function updateTimeline(){if(!current||!current.item){id('timeline-fill').style.width='0%';id('time-elapsed').innerHTML='0:00';id('time-duration').innerHTML='0:00';id('winamp-fill').style.width='0%';id('winamp-elapsed').innerHTML='0:00';id('winamp-duration').innerHTML='0:00';return}var duration=current.item.duration_ms||0,elapsed=current.progress_ms||0;if(current.is_playing)elapsed+=Date.now()-current.fetched_at;if(elapsed>duration)elapsed=duration;var pct=duration?Math.min(100,elapsed/duration*100):0;id('timeline-fill').style.width=pct+'%';id('time-elapsed').innerHTML=formatTime(elapsed);id('time-duration').innerHTML=formatTime(duration);id('winamp-fill').style.width=pct+'%';id('winamp-elapsed').innerHTML=formatTime(elapsed);id('winamp-duration').innerHTML=formatTime(duration)}
-  function setPlaying(isPlaying){isPlayingState=!!isPlaying;id('play').className=isPlaying?'play icon-play is-playing':'play icon-play';refreshBodyClass();if(isPlaying)startMilkdrop();else stopMilkdrop()}
+  function setPlaying(isPlaying){isPlayingState=!!isPlaying;id('play').className=isPlaying?'play icon-play is-playing':'play icon-play';refreshBodyClass();if(isPlaying)startButterchurn();else stopButterchurn()}
   function setWinampTrack(text,artUrl){var el=id('winamp-track');if(el)el.innerHTML=text||'Nothing playing';var art=id('winamp-art');var ph=id('winamp-placeholder');if(art&&ph){var shown=artUrl&&artUrl.charAt?artUrl:'';if(shown){art.src=shown;art.style.display='block';ph.style.display='none'}else{art.style.display='none';ph.style.display='block'}}}
   function updateWinampPlaylist(name,artist,isPlaying){var list=id('winamp-playlist-list');if(!list)return;var rows=list.getElementsByClassName('playlist-row');for(var i=0;i<rows.length;i++){rows[i].className='playlist-row';}var row=document.createElement('div');row.className='playlist-row'+(isPlaying?' current-row':'');var ex=document.createElement('span');ex.className='pl-exit';ex.innerHTML='×';var num=document.createElement('span');num.className='pl-num';num.innerHTML=name||'Nothing playing';row.appendChild(ex);row.appendChild(num);var first=list.firstChild;if(first)list.insertBefore(row,first);else list.appendChild(row)}
   function render(data){var item=data&&data.item;if(!item){id('title').innerHTML='Nothing playing';id('artist').innerHTML='Start Spotify on another device';id('album').innerHTML='';id('minimalist-artist').innerHTML='';id('minimalist-title').innerHTML='Nothing playing';id('art').style.display='none';id('placeholder').className='';setPlaying(false);setWinampTrack('');current=null;updateTimeline();return}current=data;current.fetched_at=Date.now();var artist=item.artists.map(function(a){return a.name}).join(', ');var artUrl=(item.album&&item.album.images&&item.album.images.length)?item.album.images[0].url:'';id('title').innerHTML=item.name;id('artist').innerHTML=artist;id('album').innerHTML=item.album.name;id('minimalist-artist').innerHTML=artist;id('minimalist-title').innerHTML=item.name;setPlaying(!!data.is_playing);setWinampTrack(escapeHtml(artist)+' — '+escapeHtml(item.name),artUrl);updateWinampPlaylist(escapeHtml(item.name),escapeHtml(artist),data.is_playing);if(artUrl){id('art').src=artUrl;id('art').style.display='block';id('placeholder').className='hidden'}updateTimeline()}
