@@ -13,8 +13,7 @@ footer{position:absolute;left:48px;right:48px;bottom:18px;text-align:center;colo
 /* ---- Winamp Mode (ES5/CSS port of Webamp's four windows; no React/WebAudio/WebGL) ---- */
 .winamp{position:fixed;z-index:8;top:0;left:0;width:100%;height:100%;background:#000;display:block;padding:0;box-sizing:border-box;overflow:hidden}
 .winamp-mover{position:absolute;top:0;left:0;width:100%;height:100%}
-.wmodule{position:absolute;width:275px;background:#181b18;border:1px solid #2c312c;box-shadow:0 8px 24px rgba(0,0,0,.7);font-family:Arial,"Helvetica Neue",sans-serif;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-.wtitle{height:14px;background:-webkit-linear-gradient(#4c535c,#2c3138);background:linear-gradient(#4c535c,#2c3138);color:#dfe4db;font-size:11px;font-weight:bold;letter-spacing:.04em;padding:0 4px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-between;justify-content:space-between;border-bottom:1px solid #14161a;cursor:move}
+.wmodule{position:absolute;width:275px;background:#181b18;border:1px solid #2c312c;box-shadow:0 8px 24px rgba(0,0,0,.7);font-family:Arial,"Helvetica Neue",sans-serif;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.wmodule.main{background-image:url("winamp-assets/main.png");background-size:contain;background-repeat:no-repeat;border:none;box-shadow:2px 2px 5px rgba(0,0,0,.5)}.wtitle{height:14px;background-image:url("winamp-assets/titlebar.png");background-size:cover;background-repeat:no-repeat;color:#dfe4db;font-size:11px;font-weight:bold;letter-spacing:.04em;padding:0 4px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-between;justify-content:space-between;border-bottom:1px solid #14161a;cursor:move}
 .wtitle-btns{display:-webkit-flex;display:flex;gap:3px}
 .wtitle-btns button{border:0;background:#2c3138;color:#dfe4db;width:15px;height:11px;line-height:9px;font-size:9px;padding:0;cursor:pointer}
 .wtitle-btns button:active,.wtitle-btns button:hover{background:#b6d64b;color:#182015}
@@ -39,11 +38,9 @@ body.winamp-active .winamp-obar:nth-child(1){animation-delay:.0s}body.winamp-act
 .winamp-trackbar-seek{background:#14161a;border:1px solid #3a3f3a;height:6px;border-radius:2px;margin-top:4px;overflow:hidden}
 .winamp-fill{background:linear-gradient(#9be39b,#3f8a3f);background:-webkit-linear-gradient(#9be39b,#3f8a3f);width:0;height:100%}
 .winamp-controls{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:flex-start;justify-content:flex-start;gap:3px;padding-top:6px;flex-wrap:nowrap}
-.winamp-btn{border:1px solid #14161a;border-radius:3px;width:22px;height:18px;font-size:10px;line-height:1;cursor:pointer;color:#000;background:linear-gradient(#c6cbc6,#7c837c);background:-webkit-linear-gradient(#c6cbc6,#7c837c);padding:0}
-.winamp-btn:active{background:#5a615a}
-.winamp-play{background:linear-gradient(#9be39b,#3f8a3f);background:-webkit-linear-gradient(#9be39b,#3f8a3f);color:#06240a;width:26px}
-.winamp-stop{background:linear-gradient(#e09b9b,#8f3f3f);background:-webkit-linear-gradient(#e09b9b,#8f3f3f);color:#2a0606}
-.winamp-pause{background:linear-gradient(#e0d09b,#8f7f3f);background:-webkit-linear-gradient(#e0d09b,#8f7f3f);color:#2a2006}
+.winamp-btn{border:none;border-radius:0;width:23px;height:18px;font-size:0;line-height:1;cursor:pointer;color:transparent;background-image:url("winamp-assets/buttons.png");background-repeat:no-repeat;padding:0}.winamp-prev{background-position:0 0}.winamp-play{background-position:-23px 0}.winamp-pause{background-position:-46px 0}.winamp-stop{background-position:-69px 0}.winamp-next{background-position:-92px 0}.winamp-eject{background-position:-114px 0}.winamp-btn:active{filter:brightness(0.75)}.winamp-prev:active{background-position:0 -18px}.winamp-play:active{background-position:-23px -18px}.winamp-pause:active{background-position:-46px -18px}.winamp-stop:active{background-position:-69px -18px}.winamp-next:active{background-position:-92px -18px}.winamp-eject:active{background-position:-114px -18px}
+
+/* Removed gradient-based play/stop/pause overrides - using Winamp 2.9 sprite sheet instead */
 .winamp-volume{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:3px;margin-left:4px}
 .winamp-vol-label{color:#dfe4db;font-size:8px;font-weight:bold}
 .winamp-volbar{width:38px;height:6px;background:#14161a;border:1px solid #3a3f3a;border-radius:2px;overflow:hidden}
