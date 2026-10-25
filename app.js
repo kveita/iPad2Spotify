@@ -144,74 +144,91 @@ function request(method,url,body,done){if(url.charAt(0)==='/')url='https://'+loc
   }
   id('eq-on').addEventListener('click', function () { eqOn = !eqOn; if (!eqOn) eqAuto = false; refreshEqToggles(); });
   id('eq-auto').addEventListener('click', function () { eqAuto = !eqAuto; if (eqAuto) eqOn = true; refreshEqToggles(); });
-  // Milkdrop CSS visualizer (no WebGL on iPad 2)
-  var milkCtx = null, milkAnim = null, milkPhase = 0;
-  
-function initButterchurn() {
-  const container = document.getElementById('winamp-milkdrop').querySelector('div');
-  const canvas = document.getElementById('milkdrop-canvas');
+  // Butterchurn WebGL visualizer (replaces Milkdrop CSS)
+  var butterchurnVisualizer = null, animationFrameId = null;
 
-  // Set canvas size to match container
-  const resizeCanvas = () => {
-    const rect = container.getBoundingClientRect();
-    canvas.width = Math.max(1, rect.width);
-    canvas.height = Math.max(1, rect.height);
-  };
+  function initButterchurn() {
+    const container = document.getElementById('winamp-milkdrop');
+    const canvas = document.getElementById('milkdrop-canvas');
 
-  // Initial resize
-  resizeCanvas();
+    // Set canvas size to match container
+    const resizeCanvas = () => {
+      if (container && typeof container.getBoundingClientRect === 'function') {
+        const rect = container.getBoundingClientRect();
+        canvas.width = Math.max(1, rect.width);
+        canvas.height = Math.max(1, rect.height);
+      }
+    };
 
-  // Create audio context and analyser
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  const analyser = audioContext.createAnalyser();
-  analyser.fftSize = 2048;
-  const bufferLength = analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufferLength);
+    // Initial resize
+    resizeCanvas();;
 
-  // Create a silent source
-  const source = audioContext.createOscillator();
-  source.connect(analyser);
-  source.start();
+    // Create audio context and analyser
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
 
-  // Create butterchurn instance
-  butterchurnVisualizer = new butterchurn.default({
-    canvas: canvas,
-    audioContext: audioContext,
-    analyser: analyser,
-  });
+    // Create a silent source
+    const source = audioContext.createOscillator();
+    source.connect(analyser);
+    source.start();
 
-  // Start rendering
-  function render() {
-    analyser.getByteFrequencyData(dataArray);
-    butterchurnVisualizer.draw(dataArray);
+    // Create butterchurn instance
+    butterchurnVisualizer = new butterchurn.default({
+      canvas: canvas,
+      audioContext: audioContext,
+      analyser: analyser,
+    });
+
+    // Start rendering
+    function render() {
+      analyser.getByteFrequencyData(dataArray);
+      butterchurnVisualizer.draw(dataArray);
+      animationFrameId = requestAnimationFrame(render);
+    }
+
+    // Start the render loop
     animationFrameId = requestAnimationFrame(render);
+
+    // Handle window resize
+    window.addEventListener('resize', resizeCanvas);
   }
 
-  // Start the render loop
-  animationFrameId = requestAnimationFrame(render);
-
-  // Handle window resize
-  window.addEventListener('resize', resizeCanvas);
-}
-
-function startButterchurn() {
-  if (!butterchurnVisualizer) {
-    initButterchurn();
+  function startButterchurn() {
+    if (!butterchurnVisualizer) {
+      initButterchurn();
+    }
   }
-}
 
-function stopButterchurn() {
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-    animationFrameId = null;
+  function stopButterchurn() {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
   }
-}
 
-// Replace the old Milkdrop functions with the new ones
-// We'll also need to update the setPlaying function to use startButterchurn/stopButterchurn
-// But we'll do that separately by replacing the calls in setPlaying.
+  // Winamp spectrum visualizer loop
+  var winampAnimFrameId = null;
+  function startWinampVisualizer() {
+    if (winampAnimFrameId || !window.updateVisualizer || !window.analyzeNow) return;
+    function updateWinampFrame() {
+      var analysis = window.analyzeNow();
+      if (analysis && analysis.frequencies) {
+        window.updateVisualizer(analysis);
+      }
+      winampAnimFrameId = requestAnimationFrame(updateWinampFrame);
+    }
+    winampAnimFrameId = requestAnimationFrame(updateWinampFrame);
+  }
+  function stopWinampVisualizer() {
+    if (winampAnimFrameId) {
+      cancelAnimationFrame(winampAnimFrameId);
+      winampAnimFrameId = null;
+    }
+  }
 
- }
   initWinLayout();
   function pair(){var code=id('pairing-code').value.replace(/[^a-z0-9]/ig,'').toUpperCase();if(!code){message('Enter the code shown in Safari after Spotify login.');return}message('Pairing this fullscreen app…');request('POST','/api/auth/pair',{code:code},function(status,data){if(status===200){message('');showPlayer()}else if(status===0)message('Could not reach the server. Check the connection and try again.');else message((data&&data.error)||('Pairing failed (status '+status+'). Try a new code.'))})}
   function login(){window.location.href='/api/auth/login'}
@@ -219,10 +236,10 @@ function stopButterchurn() {
   function schedulePoll(delay){if(timer)clearTimeout(timer);timer=setTimeout(poll,delay)}
   function pollDelay(data){var item=data&&data.item;if(!item)return 30000;if(!data.is_playing)return 30000;var duration=item.duration_ms||0,progress=data.progress_ms||0,remaining=duration-progress;if(remaining>0&&remaining<=20000)return Math.max(3000,Math.min(10000,remaining-2000));return 15000}
   function updateTimeline(){if(!current||!current.item){id('timeline-fill').style.width='0%';id('time-elapsed').innerHTML='0:00';id('time-duration').innerHTML='0:00';id('winamp-fill').style.width='0%';id('winamp-elapsed').innerHTML='0:00';id('winamp-duration').innerHTML='0:00';return}var duration=current.item.duration_ms||0,elapsed=current.progress_ms||0;if(current.is_playing)elapsed+=Date.now()-current.fetched_at;if(elapsed>duration)elapsed=duration;var pct=duration?Math.min(100,elapsed/duration*100):0;id('timeline-fill').style.width=pct+'%';id('time-elapsed').innerHTML=formatTime(elapsed);id('time-duration').innerHTML=formatTime(duration);id('winamp-fill').style.width=pct+'%';id('winamp-elapsed').innerHTML=formatTime(elapsed);id('winamp-duration').innerHTML=formatTime(duration)}
-  function setPlaying(isPlaying){isPlayingState=!!isPlaying;id('play').className=isPlaying?'play icon-play is-playing':'play icon-play';refreshBodyClass();if(isPlaying)startButterchurn();else stopButterchurn()}
+  function setPlaying(isPlaying){isPlayingState=!!isPlaying;id('play').className=isPlaying?'play icon-play is-playing':'play icon-play';refreshBodyClass();if(isPlaying){startButterchurn();startWinampVisualizer()}else{stopButterchurn();stopWinampVisualizer()}}
   function setWinampTrack(text,artUrl){var el=id('winamp-track');if(el)el.innerHTML=text||'Nothing playing';var art=id('winamp-art');var ph=id('winamp-placeholder');if(art&&ph){var shown=artUrl&&artUrl.charAt?artUrl:'';if(shown){art.src=shown;art.style.display='block';ph.style.display='none'}else{art.style.display='none';ph.style.display='block'}}}
   function updateWinampPlaylist(name,artist,isPlaying){var list=id('winamp-playlist-list');if(!list)return;var rows=list.getElementsByClassName('playlist-row');for(var i=0;i<rows.length;i++){rows[i].className='playlist-row';}var row=document.createElement('div');row.className='playlist-row'+(isPlaying?' current-row':'');var ex=document.createElement('span');ex.className='pl-exit';ex.innerHTML='×';var num=document.createElement('span');num.className='pl-num';num.innerHTML=name||'Nothing playing';row.appendChild(ex);row.appendChild(num);var first=list.firstChild;if(first)list.insertBefore(row,first);else list.appendChild(row)}
-  function render(data){var item=data&&data.item;if(!item){id('title').innerHTML='Nothing playing';id('artist').innerHTML='Start Spotify on another device';id('album').innerHTML='';id('minimalist-artist').innerHTML='';id('minimalist-title').innerHTML='Nothing playing';id('art').style.display='none';id('placeholder').className='';setPlaying(false);setWinampTrack('');current=null;updateTimeline();return}current=data;current.fetched_at=Date.now();var artist=item.artists.map(function(a){return a.name}).join(', ');var artUrl=(item.album&&item.album.images&&item.album.images.length)?item.album.images[0].url:'';id('title').innerHTML=item.name;id('artist').innerHTML=artist;id('album').innerHTML=item.album.name;id('minimalist-artist').innerHTML=artist;id('minimalist-title').innerHTML=item.name;setPlaying(!!data.is_playing);setWinampTrack(escapeHtml(artist)+' — '+escapeHtml(item.name),artUrl);updateWinampPlaylist(escapeHtml(item.name),escapeHtml(artist),data.is_playing);if(artUrl){id('art').src=artUrl;id('art').style.display='block';id('placeholder').className='hidden'}updateTimeline()}
+  function render(data){var item=data&&data.item;if(!item){id('title').innerHTML='Nothing playing';id('artist').innerHTML='Start Spotify on another device';id('album').innerHTML='';id('minimalist-artist').innerHTML='';id('minimalist-title').innerHTML='Nothing playing';id('art').style.display='none';id('placeholder').className='';setPlaying(false);setWinampTrack('');current=null;updateTimeline();return}var trackId=item.id;if(current && current.item && current.item.id !== trackId){window.currentTrackId = trackId; if(window.requestAudioAnalysis) window.requestAudioAnalysis(); if(window.audioClock){window.audioClock.setProgress(data.progress_ms || 0); window.audioClock.resume();}}else{window.currentTrackId = trackId; if(window.requestAudioAnalysis) window.requestAudioAnalysis();}if(window.audioClock && data.progress_ms !== undefined){window.audioClock.setProgress(data.progress_ms || 0);}current=data;current.fetched_at=Date.now();var artist=item.artists.map(function(a){return a.name}).join(', ');var artUrl=(item.album&&item.album.images&&item.album.images.length)?item.album.images[0].url:'';id('title').innerHTML=item.name;id('artist').innerHTML=artist;id('album').innerHTML=item.album.name;id('minimalist-artist').innerHTML=artist;id('minimalist-title').innerHTML=item.name;setPlaying(!!data.is_playing);setWinampTrack(escapeHtml(artist)+' — '+escapeHtml(item.name),artUrl);updateWinampPlaylist(escapeHtml(item.name),escapeHtml(artist),data.is_playing);if(artUrl){id('art').src=artUrl;id('art').style.display='block';id('placeholder').className='hidden'}updateTimeline()}
   function poll(){request('GET','/api/spotify/currently-playing',null,function(status,data){if(status===200){render(data);id('winamp-message').innerHTML='Playing';schedulePoll(pollDelay(data))}else if(status===401){id('status').innerHTML='Not connected';id('player-message').innerHTML=data.error||'Pair again.';id('winamp-message').innerHTML=data.error||'Pair again.';schedulePoll(30000)}else{id('player-message').innerHTML='Waiting for Spotify…';id('winamp-message').innerHTML='Waiting for Spotify…';schedulePoll(30000)}})}
   function command(action){request('POST','/api/spotify/command',{action:action},function(status,data){if(status!==200){var m=data.error||'Command failed';id('player-message').innerHTML=m;id('winamp-message').innerHTML=m}else{id('winamp-message').innerHTML='Command sent'}schedulePoll(750)})}
   setInterval(updateTimeline,1000);

@@ -44,6 +44,7 @@ function buildDom() {
     el.offsetLeft = 0; el.offsetTop = 0;
     el.style = el.style || {};
     el.getContext = () => null;
+    el.getBoundingClientRect = () => ({ width: 275, height: 116 });
     el.value = 50;
     // For module windows, synthesize a .wtitle child so the drag listener wires.
     if (/^winamp-(main|playlist|eq|milkdrop)$/.test(m[1])) {
@@ -153,7 +154,8 @@ test('render() populates winamp track, time and progress', () => {
     'request(\'GET\',\'/api/spotify/currently-playing\',null,function(status){if(status===200)showPlayer()});',
     'window.__expose={};window.__expose.render=render;window.__expose.updateTimeline=updateTimeline;window.__expose.setWinamp=setWinamp;'
   );
-  const w = { location: { host: 'x', href: '' } };
+  const w = { location: { host: 'x', href: '' }, AudioContext: function() { this.createAnalyser = () => ({ fftSize: 2048, frequencyBinCount: 1024, getByteFrequencyData: () => {} }); this.createOscillator = () => ({ connect: () => {}, start: () => {} }); }, webkitAudioContext: function() { this.createAnalyser = () => ({ fftSize: 2048, frequencyBinCount: 1024, getByteFrequencyData: () => {} }); this.createOscillator = () => ({ connect: () => {}, start: () => {} }); } };
+  const butterchurn = { default: function(config) { return { draw: () => {} }; } };
   const probeFn = new Function('document', 'window', 'location', 'XMLHttpRequest', 'setInterval', 'clearTimeout', 'setTimeout',
     jsProbe);
   probeFn(document, w, { host: 'x', href: '' }, class { open(){} setRequestHeader(){} send(){} set timeout(v){} },
@@ -208,10 +210,12 @@ test('Winamp exit restores the regular player', () => {
     'request(\'GET\',\'/api/spotify/currently-playing\',null,function(status){if(status===200)showPlayer()});',
     'window.__expose={};window.__expose.render=render;window.__expose.setWinamp=setWinamp;'
   );
-  const w = { location: { host: 'x', href: '' } };
-  const probeFn = new Function('document', 'window', 'location', 'XMLHttpRequest', 'setInterval', 'clearTimeout', 'setTimeout', jsProbe);
+  const w = { location: { host: 'x', href: '' }, AudioContext: function() { this.createAnalyser = () => ({ fftSize: 2048, frequencyBinCount: 1024, getByteFrequencyData: () => {} }); this.createOscillator = () => ({ connect: () => {}, start: () => {} }); }, webkitAudioContext: function() { this.createAnalyser = () => ({ fftSize: 2048, frequencyBinCount: 1024, getByteFrequencyData: () => {} }); this.createOscillator = () => ({ connect: () => {}, start: () => {} }); } };
+  const butterchurn = { default: function(config) { return { draw: () => {} }; } };
+  const probeFn = new Function('document', 'window', 'location', 'XMLHttpRequest', 'setInterval', 'clearTimeout', 'setTimeout', 'butterchurn',
+    jsProbe);
   probeFn(document, w, { host: 'x', href: '' }, class { open(){} setRequestHeader(){} send(){} set timeout(v){} },
-    function(){}, function(){}, function(){});
+    function(){}, function(){}, function(){}, butterchurn);
   w.__expose.setWinamp(true);
   assert.ok(els['player'].className.includes('hidden'));
   // exit via the close button
